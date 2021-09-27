@@ -120,7 +120,9 @@ void setup() {
         pClient_bb = NimBLEDevice::createClient();
         if(pClient_bb->connect(&device)) {
           connected_bb = true;
-          Serial.println("Blueboard on");
+          Serial.println("connected");
+          M5.Lcd.println("Blueboard on");       
+          
         }
       }
       
