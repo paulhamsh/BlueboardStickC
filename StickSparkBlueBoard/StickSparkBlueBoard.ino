@@ -7,9 +7,10 @@ NimBLEAdvertisedDevice device;
 NimBLEClient *pClient_bb, *pClient_sp;
 NimBLERemoteService *pService_bb, *pService_sp;
 NimBLERemoteCharacteristic *pReceiver_bb, *pReceiver_sp;
-NimBLERemoteCharacteristic *pSender_sp;
+NimBLERemoteCharacteristic *pSender_sp, *pSender_bb;
 
 const int preset_cmd_size = 26;
+const int bb_light_size = 5;
 
 byte preset_cmd[] = {
   0x01, 0xFE, 0x00, 0x00,
@@ -21,8 +22,17 @@ byte preset_cmd[] = {
   0x00, 0xF7
 };
 
+byte bb_light_on[] = {
+  0x80, 0x80, 0xB0, 0x14, 0x7f
+};
+
+byte bb_light_off[] = {
+  0x80, 0x80, 0xB0, 0x14, 0x00
+};
+
 bool triggered;
 int curr_preset;
+int old_preset;
 
 void notifyCB_bb(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify){
   int i;
@@ -75,9 +85,10 @@ void notifyCB_sp(NimBLERemoteCharacteristic* pRemoteCharacteristic, uint8_t* pDa
 
 bool connected_bb, connected_sp;
 
+
 void setup() {
   // put your setup code here, to run once:
-  M5.begin(true,true,false);
+  M5.begin();
   
   M5.Lcd.setRotation(-1);
   M5.Lcd.setTextColor(WHITE);
@@ -89,6 +100,7 @@ void setup() {
 
   triggered = false;
   curr_preset = 0;
+  old_preset = 0;
   
   connected_bb = false;
   connected_sp = false;
@@ -104,7 +116,6 @@ void setup() {
 
     NimBLEUUID BBserviceUuid("03b80e5a-ede8-4b33-a751-6ce34ec4c700"); // service for iRig Blueboard MIDI mode 
     NimBLEUUID SPserviceUuid("ffc0"); // service for Spark  
-//    NimBLEUUID SPserviceUuid("1811"); // service for tester      
   
     Serial.println("**********************************************************");
     for(i = 0; i < results.getCount() && (!connected_bb || !connected_sp); i++) {
@@ -121,13 +132,9 @@ void setup() {
         if(pClient_bb->connect(&device)) {
           connected_bb = true;
           Serial.println("connected");
-          M5.Lcd.println("Blueboard on");       
-          
+          M5.Lcd.println("Blueboard on");
         }
       }
-      
-//      else if (strcmp(device.getName().c_str(),"Alert Notification") == 0) {
-//        Serial.print("Found Alert Notification by name - trying to connect....");
       else if (device.isAdvertisingService(SPserviceUuid)) {
         pClient_sp = NimBLEDevice::createClient();
         if(pClient_sp->connect(&device)) {
@@ -146,6 +153,7 @@ void setup() {
       pService_bb = pClient_bb->getService(BBserviceUuid);
       if (pService_bb != nullptr) {
         pReceiver_bb = pService_bb->getCharacteristic("7772e5db-3868-4112-a1a9-f2669d106bf3");
+        //pSender_bb = pService_bb->getCharacteristic("7772e5db-3868-4112-a1a9-f2669d106bf3");
         if (pReceiver_bb && pReceiver_bb->canNotify()) {
           if (!pReceiver_bb->subscribe(true, notifyCB_bb, true)) {
             connected_bb = false;
@@ -159,8 +167,6 @@ void setup() {
     if (connected_sp) {
       pService_sp = pClient_sp->getService(SPserviceUuid);
       if (pService_sp != nullptr) {
-//        pReceiver_sp = pService_sp->getCharacteristic("2a46");
-//        pSender_sp = pService_sp->getCharacteristic("2a44");
         pSender_sp   = pService_sp->getCharacteristic("ffc1");
         pReceiver_sp = pService_sp->getCharacteristic("ffc2");
         if (pReceiver_sp && pReceiver_sp->canNotify()) {
@@ -184,6 +190,13 @@ void loop() {
     if (connected_sp) {
       preset_cmd[preset_cmd_size-2] = curr_preset;
       pSender_sp->writeValue(preset_cmd, preset_cmd_size, false);
+    if (connected_bb) {
+      bb_light_off[3] = old_preset + 20;
+      bb_light_on[3] = curr_preset + 20;
+      old_preset = curr_preset;
+      pReceiver_bb->writeValue(bb_light_off, bb_light_size, false);
+      pReceiver_bb->writeValue(bb_light_on, bb_light_size, false);
+    }
     }
   }
 }
