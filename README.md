@@ -7,6 +7,6 @@ And you need to start the Blueboard in MIDI C mode (turn on holding C down)!
 
 
 There are two sets of code here:   
-   StickSparkBlueBoard - this is the basic code to connect to the Blueboard and Spark, but doesn't allow app connectivity    
-   SparkBlueBoard - this is the full code to allow Blueboard, Spark and app to connect simultaneously   
+- StickSparkBlueBoard - this is the basic code to connect to the Blueboard and Spark, but doesn't allow app connectivity    
+- SparkBlueBoard - this is the full code to allow Blueboard, Spark and app to connect simultaneously   
    
